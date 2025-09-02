@@ -1,0 +1,11 @@
+2025-08-29T16:23:21.581Z - Teacher 1 invited Student 1
+2025-08-29T16:28:26.590Z - Student 1 accepted invite 1
+2025-08-30T20:35:28.374Z - SENT invite_id=2 teacher_id=1 student_id=1 scheduled_at=2025-08-31T15:00:00.000Z
+2025-08-30T20:35:41.597Z - ACCEPTED invite_id=2 teacher_id=1 student_id=1 scheduled_at=2025-08-31T15:00:00.000Z
+2025-08-30T20:35:41.605Z - AUTO-REJECT other invites for student_id=1 scheduled_at=2025-08-31T15:00:00.000Z due_to_accept=2
+2025-08-30T20:35:54.402Z - REJECTED invite_id=2 teacher_id=1 student_id=1 scheduled_at=2025-08-31T15:00:00.000Z
+2025-08-30T20:48:21.471Z - ACCEPTED invite_id=2 teacher_id=1 student_id=1 scheduled_at=2025-08-31T15:00:00.000Z
+2025-08-30T20:48:21.472Z - AUTO-REJECT other invites for student_id=1 scheduled_at=2025-08-31T15:00:00.000Z due_to_accept=2
+2025-08-31T11:38:45.493Z - SENT invite_id=3 teacher_id=1 student_id=1 scheduled_at=2025-09-04T10:00:00.000Z
+2025-08-31T11:39:47.235Z - SENT invite_id=4 teacher_id=1 student_id=1 scheduled_at=2025-09-05T10:00:00.000Z
+2025-08-31T15:36:49.391Z - REJECTED invite_id=3 teacher_id=1 student_id=1 scheduled_at=2025-09-04T10:00:00.000Z

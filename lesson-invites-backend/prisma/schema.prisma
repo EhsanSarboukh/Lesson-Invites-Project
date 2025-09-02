@@ -1,0 +1,39 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id      Int            @id @default(autoincrement())
+  name    String
+  email   String         @unique
+  invites LessonInvite[]
+}
+
+model Student {
+  id      Int            @id @default(autoincrement())
+  name    String
+  email   String         @unique
+  invites LessonInvite[]
+}
+
+model LessonInvite {
+  id          Int      @id @default(autoincrement())
+  teacherId   Int
+  studentId   Int
+  status      String   @default("pending") // pending | accepted | rejected
+  scheduledAt DateTime
+  createdAt   DateTime @default(now())
+
+  teacher Teacher @relation(fields: [teacherId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([teacherId, studentId, scheduledAt])
+  @@index([studentId, scheduledAt])
+}
