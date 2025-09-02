@@ -61,7 +61,6 @@ Lesson-Invites-Project/
 * Git
 * Flutter SDK (for mobile)
 * Android Studio / iOS Xcode for emulators (or a real device)
-* Docker (optional; only if you want a MySQL/Postgres DB instead of SQLite)
 
 ---
 
@@ -101,19 +100,7 @@ npx prisma db push
 npx prisma generate
 ```
 
-### 3.4 (Optional) Seed data
-
-If a seed script exists:
-
-```bash
-node prisma/seed.js
-# or if seed is TS:
-node -r ts-node/register prisma/seed.ts
-```
-
-Or create teachers/students via API as shown below.
-
-### 3.5 Start dev server
+### 3.4 Start dev server
 
 ```bash
 npm run start:dev
@@ -135,43 +122,6 @@ Default: `http://localhost:3000` (change port in `.env` or `src/main.ts` if need
   ```
 * `log.txt` is used by the backend to record actions (send/accept/reject).
 
-### 3.7 Optional: MySQL with Docker
-
-If you prefer MySQL:
-
-1. create `docker-compose.yml` and run:
-
-```yaml
-version: "3.8"
-services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: examplepassword
-      MYSQL_DATABASE: lesson_invites
-      MYSQL_USER: appuser
-      MYSQL_PASSWORD: apppassword
-    ports: ["3306:3306"]
-    volumes: ["db_data:/var/lib/mysql"]
-volumes:
-  db_data:
-```
-
-2. Start:
-
-```bash
-docker compose up -d
-```
-
-3. `.env`:
-
-```env
-DATABASE_URL="mysql://appuser:apppassword@127.0.0.1:3306/lesson_invites"
-```
-
-4. Then run: `npx prisma migrate dev --name init`
-
----
 
 ## 4 — Web Frontend (Next.js + TypeScript + Tailwind) — Setup & Run
 
@@ -270,6 +220,7 @@ Check `android/app/src/main/AndroidManifest.xml` includes:
 flutter pub get
 # start an emulator or connect device, then:
 flutter run
+choose chrome web
 ```
 
 ---
