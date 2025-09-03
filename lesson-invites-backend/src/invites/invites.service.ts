@@ -1,5 +1,4 @@
-// src/invites/invites.service.ts
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs';
 
@@ -8,14 +7,25 @@ export class InvitesService {
   constructor(private prisma: PrismaService) {}
 
   private logAction(action: string) {
-    fs.appendFileSync('log.txt', `${new Date().toISOString()} - ${action}\n`);
+    try {
+      fs.appendFileSync('log.txt', `${new Date().toISOString()} - ${action}\n`);
+    } catch {
+      // ignore logging failures in dev
+    }
   }
 
+  /**
+   * Create a new invite from teacher -> student at a scheduled time.
+   * Enforces: a teacher cannot send more than one invite to the same student at the same time.
+   */
   async createInvite(teacherId: number, studentId: number, scheduledAt: Date) {
+    // prevent duplicate invites for same (teacher, student, scheduledAt)
     const existing = await this.prisma.lessonInvite.findFirst({
       where: { teacherId, studentId, scheduledAt },
     });
-    if (existing) throw new BadRequestException('Invite already exists for this student and time.');
+    if (existing) {
+      throw new BadRequestException('An invite already exists for this student and time from this teacher.');
+    }
 
     const invite = await this.prisma.lessonInvite.create({
       data: { teacherId, studentId, scheduledAt },
@@ -25,48 +35,88 @@ export class InvitesService {
     return invite;
   }
 
-  async respondToInvite(inviteId: number, status: 'accepted' | 'rejected' ) {
-    const invite = await this.prisma.lessonInvite.update({
-      where: { id: inviteId },
-      data: { status },
-    });
+  /**
+   * Respond to an invite (accept/reject).
+   * Enforces:
+   *  - Only one future accepted invite per student at any time.
+   *  - When an invite is accepted, all other invites for the same student & same time are auto-rejected.
+   */
+  async respondToInvite(inviteId: number, status: 'accepted' | 'rejected') {
+    // Make sure invite exists first
+    const current = await this.prisma.lessonInvite.findUnique({ where: { id: inviteId } });
+    if (!current) throw new NotFoundException('Invite not found');
 
-    this.logAction(`${status.toUpperCase()} invite_id=${invite.id} teacher_id=${invite.teacherId} student_id=${invite.studentId} scheduled_at=${invite.scheduledAt.toISOString()}`);
-
-    if (status === 'accepted') {
-      // auto-reject other invites for same student & time
-      await this.prisma.lessonInvite.updateMany({
-        where: {
-          studentId: invite.studentId,
-          scheduledAt: invite.scheduledAt,
-          NOT: { id: inviteId },
-        },
+    // Fast path for rejection
+    if (status === 'rejected') {
+      const rejected = await this.prisma.lessonInvite.update({
+        where: { id: inviteId },
         data: { status: 'rejected' },
       });
-      this.logAction(`AUTO-REJECT other invites for student_id=${invite.studentId} scheduled_at=${invite.scheduledAt.toISOString()} due_to_accept=${inviteId}`);
+      this.logAction(`Student ${rejected.studentId} rejected invite ${inviteId}`);
+      return rejected;
     }
 
-    return invite;
+    // Accept path: enforce single future accepted per student
+    if (status === 'accepted') {
+      const now = new Date();
+
+      // If this invite is in the past, don't allow accepting (optional guard)
+      if (current.scheduledAt <= now) {
+        throw new BadRequestException('Cannot accept a lesson in the past.');
+      }
+
+      // Check if the student already has another FUTURE accepted invite
+      const alreadyAccepted = await this.prisma.lessonInvite.findFirst({
+        where: {
+          studentId: current.studentId,
+          status: 'accepted',
+          scheduledAt: { gt: now },
+          NOT: { id: inviteId },
+        },
+        select: { id: true, scheduledAt: true },
+      });
+
+      if (alreadyAccepted) {
+        throw new BadRequestException(
+          `Student already has a future accepted lesson (invite ${alreadyAccepted.id} at ${alreadyAccepted.scheduledAt.toISOString()}).`,
+        );
+      }
+
+      // Transaction to (1) accept this invite, (2) auto-reject other invites at the same time for this student
+      const [accepted] = await this.prisma.$transaction([
+        this.prisma.lessonInvite.update({
+          where: { id: inviteId },
+          data: { status: 'accepted' },
+        }),
+        this.prisma.lessonInvite.updateMany({
+          where: {
+            studentId: current.studentId,
+            scheduledAt: current.scheduledAt,
+            NOT: { id: inviteId },
+          },
+          data: { status: 'rejected' },
+        }),
+      ]);
+
+      this.logAction(`Student ${accepted.studentId} accepted invite ${inviteId}`);
+      return accepted;
+    }
+
+    // If status is something else (shouldn't happen due to DTO), guard anyway
+    throw new BadRequestException('Invalid status');
   }
 
-  // optional status filter
-  async getAllInvites(status?: string) {
-    const where: any = {};
-    if (status) where.status = status;
+  async getAllInvites() {
     return this.prisma.lessonInvite.findMany({
-      where,
       include: { teacher: true, student: true },
-      orderBy: { scheduledAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
-  // optional status filter for student
-  async getStudentInvites(studentId: number, status?: string) {
-    const where: any = { studentId };
-    if (status) where.status = status;
+  async getStudentInvites(studentId: number) {
     return this.prisma.lessonInvite.findMany({
-      where,
-      include: { teacher: true, student: true },
+      where: { studentId, status: 'pending' },
+      include: { teacher: true },
       orderBy: { scheduledAt: 'asc' },
     });
   }

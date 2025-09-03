@@ -18,12 +18,12 @@ export class InvitesController {
 
   @Get()
   getAll(@Query('status') status?: string) {
-    return this.invitesService.getAllInvites(status);
+    return this.invitesService.getAllInvites();
   }
 
   // NOTE: added optional query param 'status'
   @Get('student/:id')
   getStudentInvites(@Param('id') id: string, @Query('status') status?: string) {
-    return this.invitesService.getStudentInvites(Number(id), status);
+    return this.invitesService.getStudentInvites(Number(id));
   }
 }
