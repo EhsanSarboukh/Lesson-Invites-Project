@@ -106,8 +106,15 @@ export class InvitesService {
     throw new BadRequestException('Invalid status');
   }
 
-  async getAllInvites() {
+  async getAllInvites(status?: string) {
+    // If the status is 'all' or is not provided, return all invites.
+    // Otherwise, filter by the provided status.
+    const whereClause = status && status.toLowerCase() !== 'all' 
+      ? { status: status } 
+      : {};
+
     return this.prisma.lessonInvite.findMany({
+      where: whereClause,
       include: { teacher: true, student: true },
       orderBy: { createdAt: 'desc' },
     });

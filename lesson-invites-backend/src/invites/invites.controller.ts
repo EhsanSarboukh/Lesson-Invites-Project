@@ -18,7 +18,7 @@ export class InvitesController {
 
   @Get()
   getAll(@Query('status') status?: string) {
-    return this.invitesService.getAllInvites();
+    return this.invitesService.getAllInvites(status);
   }
 
   // NOTE: added optional query param 'status'
